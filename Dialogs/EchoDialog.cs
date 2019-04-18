@@ -284,7 +284,17 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
                         }
                         else
                         {
-                            await context.PostAsync("You said: " + message.Text);
+                            // await context.PostAsync("You said: " + message.Text);
+                            var reply = context.MakeMessage();
+                            var transferTo = message.Text.Substring(TRANSFER_MESSAGE.Length);
+
+                            reply.ChannelData = new LiveAssistChannelData()
+                            {
+                                Type = "transfer",
+                                Skill = "BotEscalation"
+                            };
+
+                            await context.PostAsync(reply);
                         }
                         break;
 
