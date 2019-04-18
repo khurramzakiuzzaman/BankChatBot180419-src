@@ -207,14 +207,25 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
                     case "visitorContextData":
                         //process context data if required. This is the first message received so say hello.
                         //await context.PostAsync("Hi, I am an echo bot and will repeat everything you said.");
-                        string Welcomemessage = "Glad to talk to you. Welcome to iBot - your Virtual iBot.";
-                        await context.PostAsync(Welcomemessage);
+                        //string Welcomemessage = "Glad to talk to you. Welcome to iBot - your Virtual iBot.";
+                        //await context.PostAsync(Welcomemessage);
 
-                        PromptDialog.Text(
-                        context: context,
-                        resume: ResumeLanguageOptions,
-                        prompt: $@"Which language you want to prefer?{Environment.NewLine} 1. English {Environment.NewLine} 2. Arabic",
-                        retry: "Sorry, I don't understand that.");
+                        //PromptDialog.Text(
+                        //context: context,
+                        //resume: ResumeLanguageOptions,
+                        //prompt: $@"Which language you want to prefer?{Environment.NewLine} 1. English {Environment.NewLine} 2. Arabic",
+                        //retry: "Sorry, I don't understand that.");
+
+                        var reply2 = context.MakeMessage();
+                        var transferTo2 = message.Text.Substring(TRANSFER_MESSAGE.Length);
+
+                        reply2.ChannelData = new LiveAssistChannelData()
+                        {
+                            Type = "transfer",
+                            Skill = "BotEscalation"
+                        };
+
+                        await context.PostAsync(reply2);
 
                         break;
 
@@ -284,17 +295,8 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
                         }
                         else
                         {
-                            // await context.PostAsync("You said: " + message.Text);
-                            var reply = context.MakeMessage();
-                            var transferTo = message.Text.Substring(TRANSFER_MESSAGE.Length);
-
-                            reply.ChannelData = new LiveAssistChannelData()
-                            {
-                                Type = "transfer",
-                                Skill = "BotEscalation"
-                            };
-
-                            await context.PostAsync(reply);
+                            await context.PostAsync("You said: " + message.Text);
+                           
                         }
                         break;
 
