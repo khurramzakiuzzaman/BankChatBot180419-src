@@ -8,6 +8,7 @@ using Cafex.LiveAssist.Bot;
 using System.Timers;
 using Newtonsoft.Json;
 using Microsoft.Bot.Builder.ConnectorEx;
+using System.Collections.Generic;
 
 namespace Microsoft.Bot.Sample.SimpleEchoBot
 {
@@ -15,154 +16,492 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
     public class EchoDialog : IDialog<object>
     {
         protected int count = 1;
-        static string TRANSFER_MESSAGE = "transfer to ";
-        public string customerName;
         #region Old Code
-        //private static Sdk sdk;
-        //private static ChatContext chatContext;
-        //private static string conversationRef;
-        //private static Timer timer;
+        private static Sdk sdk;
+        private static ChatContext chatContext;
+        private static string conversationRef;
+        private static Timer timer;
+        public string accountNumber;
+        public string lostDate;
+        public string lostCity;
+        public string complaint;
+        public string phone;
+        public string email;
+        public string customerName;
+        public decimal loanAmount;
+        public decimal loanAmountMonths;
+
+        public async Task StartAsync(IDialogContext context)
+        {
+            sdk = sdk ?? new Sdk(new SdkConfiguration()
+            {
+                AccountNumber = "25485974"
+            });
+            context.Wait(MessageReceivedAsync);
+        }
+
+        public async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
+        {
+            var activity = await argument as Activity;
+
+            if (chatContext != null)
+            {
+                // As chatContext is not null we already have an escalated chat.
+                // Post the incoming message line to the escalated chat
+                await sdk.PostLine(activity.Text, chatContext);
+            }
+            else if (activity.Text == "reset")
+            {
+                PromptDialog.Confirm(
+                    context,
+                    AfterResetAsync,
+                    "Are you sure you want to reset the count?",
+                    "Didn't get that!",
+                    promptStyle: PromptStyle.Auto);
+            }
+            else if (activity.Text.Contains("help") || activity.Text.Contains("transfer"))
+            {
+                // "help" within the message is our escalation trigger.
+                await context.PostAsync("Escalating to agent");
+                await Escalate(activity); // Implemented in next step.
+            }
+            else
+            {
+                //await context.PostAsync($"{this.count++}: You said {activity.Text}");
+                //context.Wait(MessageReceivedAsync);
+
+                string message = "Welcome to iBank.";
+                await context.PostAsync(message);
+
+                PromptDialog.Choice(context, ResumeBankServicesOptionsAsync,
+                    new List<string>()
+                    { "English",
+                  "Arabic"
+                    }, "Please select your langauge");
+            }
+        }
+        public virtual async Task ResumeBankServicesOptionsAsync(IDialogContext context, IAwaitable<string> argument)
+        {
+            PromptDialog.Choice(context, ResumeBankServicesAsync,
+                new List<string>()
+                {
+                    "Phone Banking",
+                    "Lost Cards",
+                    "Internet Banking",
+                    "Products",
+                    "Suggestions and Complaints"
+                },
+                "Thank you, please select your desired service.");
+        }
+        public virtual async Task ResumeBankServicesAsync(IDialogContext context, IAwaitable<string> argument)
+        {
+            var result = await argument;
+            string selection = result;
+            if (selection == "Phone Banking")
+            {
+
+                PromptDialog.Text(
+                context: context,
+                resume: ResumePhoneBankingOptionsAsync,
+                prompt: "Please enter your 4 digit phone banking number or account number",
+                retry: "Sorry, I don't understand that.");
+            }
+            else if (selection == "Lost Cards")
+            {
+                PromptDialog.Choice(context, ResumeBankValidationAsync,
+                    new List<string>()
+                    {
+                        "Debit Card",
+                        "Credit Card"
+                    },
+                    "Please select the one you lost?");
+            }
+            else if (selection == "Internet Banking")
+            {
+                PromptDialog.Text(
+               context: context,
+               resume: CustomerNameFromGreeting,
+               prompt: "Please enter your 4 digit phone banking number or account number",
+               retry: "Sorry, I don't understand that.");
+            }
+            else if (selection == "Products")
+            {
+                PromptDialog.Choice(context, ResumeBankProductOptionsAsync,
+                   new List<string>()
+                   {
+                        "Apply for a loan",
+                        "Open an account",
+                        "Know interest rates",
+                        "Forex"
+                   },
+                   "Please select the desired service?");
+            }
+            else if (selection == "Suggestions and Complaints")
+            {
+                PromptDialog.Text(
+            context: context,
+            resume: CustomerName,
+            prompt: "What is your complaint/suggestion?",
+            retry: "Sorry, I don't understand that.");
+            }
+        }
+        public virtual async Task ResumeBankProductOptionsAsync(IDialogContext context, IAwaitable<string> argument)
+        {
+            string selection = await argument;
+            if (selection == "Apply for a loan")
+            {
+                PromptDialog.Text(
+            context: context,
+            resume: CustomerLoanProcess,
+            prompt: "Please enter your 4 digit phone banking number or account number?",
+            retry: "Sorry, I don't understand that.");
+            }
+            else if (selection == "Open an account")
+            {
+
+            }
+            else if (selection == "Know interest rates")
+            {
+
+            }
+            else if (selection == "Forex")
+            {
+
+            }
+
+        }
+        public async Task CustomerLoanProcess(IDialogContext context, IAwaitable<string> result)
+        {
+            string message = "Thanks Sekhar for validating your account number.";
+            await context.PostAsync(message);
+
+            PromptDialog.Text(
+           context: context,
+           resume: LoanMonthsExecution,
+           prompt: "Please enter the amount you want to apply.",
+           retry: "Sorry, I don't understand that.");
+        }
+        public async Task LoanMonthsExecution(IDialogContext context, IAwaitable<string> result)
+        {
+            string Amount = await result;
+            loanAmount = Convert.ToDecimal(Amount);
+
+            PromptDialog.Text(
+            context: context,
+            resume: LoanMobileNoExecution,
+            prompt: "Please enter the Number of months to repay the amount.",
+            retry: "Sorry, I don't understand that.");
+        }
+        public async Task LoanMobileNoExecution(IDialogContext context, IAwaitable<string> result)
+        {
+            string response = await result;
+            loanAmountMonths = Convert.ToDecimal(response);
+
+            PromptDialog.Text(
+            context: context,
+            resume: LoanExecution,
+            prompt: "What is the best number to contact you?",
+            retry: "Sorry, I don't understand that.");
+        }
+        public async Task LoanExecution(IDialogContext context, IAwaitable<string> result)
+        {
+            phone = await result;
 
 
-        //public async Task StartAsync(IDialogContext context)
-        //{
-        //    sdk = sdk ?? new Sdk(new SdkConfiguration()
-        //    {
-        //        AccountNumber = "25485974"
-        //    });
-        //    context.Wait(MessageReceivedAsync);
-        //}
 
-        //public async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
-        //{
-        //    var activity = await argument as Activity;
+            await context.PostAsync($@"Thank you for your interest, your request has been logged. Our Sales team will get back to you shortly.
+                                    {Environment.NewLine}Your Loan request  summary:
+                                    {Environment.NewLine}Loan Amount: {loanAmount},
+                                    {Environment.NewLine}Number of Months: {loanAmountMonths},
+                                    {Environment.NewLine}Phone Number: {phone}");
 
-        //    if (chatContext != null)
-        //    {
-        //        // As chatContext is not null we already have an escalated chat.
-        //        // Post the incoming message line to the escalated chat
-        //        await sdk.PostLine(activity.Text, chatContext);
-        //    }
-        //    else if (activity.Text == "reset")
-        //    {
-        //        PromptDialog.Confirm(
-        //            context,
-        //            AfterResetAsync,
-        //            "Are you sure you want to reset the count?",
-        //            "Didn't get that!",
-        //            promptStyle: PromptStyle.Auto);
-        //    }
-        //    else if (activity.Text.Contains("help"))
-        //    {
-        //        // "help" within the message is our escalation trigger.
-        //        await context.PostAsync("Escalating to agent");
-        //        await Escalate(activity); // Implemented in next step.
-        //    }
-        //    else
-        //    {
-        //        await context.PostAsync($"{this.count++}: You said {activity.Text}");
-        //        context.Wait(MessageReceivedAsync);
-        //    }
-        //}
-        //private async Task Escalate(Activity activity)
-        //{
-        //    // This is our reference to the upstream conversation
-        //    conversationRef = JsonConvert.SerializeObject(activity.ToConversationReference());
+           // string refno = CRMService.CreateLead(loanAmount, loanAmountMonths, phone);
 
-        //    var chatSpec = new ChatSpec()
-        //    {
-        //        // Set Agent skill to target
-        //        Skill = "BotEscalation",
-        //        VisitorName = activity.From.Name
-        //    };
+            PromptDialog.Confirm(
+         context: context,
+         resume: AnythingElseHandler,
+         prompt: "Is there anything else that I could help?",
+         retry: "Sorry, I don't understand that.");
+        }
+        public virtual async Task ResumeBankValidationAsync(IDialogContext context, IAwaitable<string> argument)
+        {
+            PromptDialog.Text(
+            context: context,
+            resume: ResumeBankOptionsAsync,
+            prompt: "Please enter your 4 digit phone banking number or account number?",
+            retry: "Sorry, I don't understand that.");
+        }
+        public virtual async Task ResumeBankOptionsAsync(IDialogContext context, IAwaitable<string> argument)
+        {
+            PromptDialog.Confirm(
+            context: context,
+            resume: LostorBlockExecution,
+            prompt: "Would you like me to suspend your card and issue new card?",
+            retry: "Sorry, I don't understand that.");
+        }
+        public async Task LostorBlockExecution(IDialogContext context, IAwaitable<bool> argument)
+        {
+            var answer = await argument;
+            if (answer)
+            {
+                string message = $"OK. I will need some information to process your request.";
+                await context.PostAsync(message);
 
-        //    // Start timer to poll for Live Assist chat events
-        //    if (timer == null)
-        //    {
-        //        timer = timer ?? new Timer(5000);
-        //        // OnTimedEvent is implemented in the next step
-        //        timer.Elapsed += (sender, e) => OnTimedEvent(sender, e);
-        //        timer.Start();
-        //    }
+                PromptDialog.Text(
+                context: context,
+                resume: LostDate,
+                prompt: "When did you lose your card?",
+                retry: "Sorry, I don't understand that.");
+            }
+            else
+            {
+                string message = $"Thanks for using I Bot. Hope you have a great day!";
+                await context.PostAsync(message);
+            }
+        }
+        public async Task LostDate(IDialogContext context, IAwaitable<string> argument)
+        {
+            var answer = await argument;
+            lostDate = answer;
 
-        //    // Request a chat via the Sdk    
-        //    chatContext = await sdk.RequestChat(chatSpec);
-        //}
+            PromptDialog.Text(
+               context: context,
+               resume: LostInformation,
+               prompt: "Which city did you lose your card in?",
+               retry: "Sorry, I don't understand that.");
+        }
+        public async Task LostInformation(IDialogContext context, IAwaitable<string> argument)
+        {
+            var answer = await argument;
+            lostCity = answer;
 
-        ////public async Task AfterResetAsync(IDialogContext context, IAwaitable<bool> argument)
-        ////{
-        ////    var confirm = await argument;
-        ////    if (confirm)
-        ////    {
-        ////        this.count = 1;
-        ////        await context.PostAsync("Reset count.");
-        ////    }
-        ////    else
-        ////    {
-        ////        await context.PostAsync("Did not reset count.");
-        ////    }
-        ////    context.Wait(MessageReceivedAsync);
-        ////}
 
-        //async void OnTimedEvent(Object source, ElapsedEventArgs eea)
-        //{
-        //    if (chatContext != null)
-        //    {
-        //        // Create an upstream reply
-        //        var reply = JsonConvert.DeserializeObject<ConversationReference>(conversationRef)
-        //            .GetPostToBotMessage().CreateReply();
 
-        //        // Create upstream connection on which to send reply 
-        //        var client = new ConnectorClient(new Uri(reply.ServiceUrl));
+            await context.PostAsync($@" {Environment.NewLine}The below is your card information:
+                                     {Environment.NewLine}Card Number:2568-2321-628-2212
+                                    {Environment.NewLine}Lost Date: {lostDate},
+                                    {Environment.NewLine}Lost City: {lostCity}");
+           // string refno = CRMService.CreateCaseRegistrationForCard(lostDate, lostCity);
 
-        //        // Poll Live Assist for events
-        //        var chatInfo = await sdk.Poll(chatContext);
+            PromptDialog.Confirm(
+               context: context,
+               resume: CardInformation,
+               prompt: "Please confirm your request for suspending the lost card?",
+               retry: "Sorry, I don't understand that.");
+        }
+        public async Task CardInformation(IDialogContext context, IAwaitable<bool> argument)
+        {
+            var answer = await argument;
+            if (answer)
+            {
+                string message = $"Thanks. Your card is now suspended and the new card will be delivered to your registered address.";
+                await context.PostAsync(message);
 
-        //        if (chatInfo != null)
-        //        {
-        //            // ChatInfo.ChatEvents will contain events since last call to poll.
-        //            if (chatInfo.ChatEvents != null && chatInfo.ChatEvents.Count > 0)
-        //            {
-        //                foreach (ChatEvent e in chatInfo.ChatEvents)
-        //                {
-        //                    switch (e.Type)
-        //                    {
-        //                        // type is either "state" or "line".
-        //                        case "line":
-        //                            // Source is either: "system", "agent" or "visitor"
-        //                            if (e.Source.Equals("system"))
-        //                            {
-        //                                reply.From.Name = "system";
-        //                            }
-        //                            else if (e.Source.Equals("agent"))
-        //                            {
-        //                                reply.From.Name = chatInfo.AgentName;
+                PromptDialog.Confirm(
+       context: context,
+       resume: AnythingElseHandler,
+       prompt: "Is there anything else that I could help?",
+       retry: "Sorry, I don't understand that.");
+            }
+            else
+            {
+                string message = $"Thanks for using I Bot. Hope you have a great day!";
+                await context.PostAsync(message);
+            }
+        }
+        public virtual async Task ResumePhoneBankingOptionsAsync(IDialogContext context, IAwaitable<string> argument)
+        {
+            accountNumber = await argument;
 
-        //                            }
-        //                            else
-        //                            {
-        //                                break;
-        //                            }
+            string message = "Thanks Sekhar for validating your account number.";
+            await context.PostAsync(message);
 
-        //                            reply.Type = "message";
-        //                            reply.Text = e.Text;
-        //                            client.Conversations.ReplyToActivity(reply);
-        //                            break;
+            PromptDialog.Choice(context, ResumePhoneOptionsAsync, new List<string>() { "Balance Enquiry", "Last 5 Transactions", "Statement & Check book Request", "Loan Account Information" }, "Please select the desired service?");
+        }
+        public virtual async Task ResumePhoneOptionsAsync(IDialogContext context, IAwaitable<string> argument)
+        {
+            string selection = await argument;
+            if (selection == "Balance Enquiry")
+            {
+                string message = "Your account balance in your savings bank is AED: 25500";
+                await context.PostAsync(message);
 
-        //                        case "state":
-        //                            // State changes
-        //                            // Valid values: "waiting", "chatting", "ended"
-        //                            if (chatInfo.State.Equals("ended"))
-        //                            {
-        //                                chatContext = null;
-        //                            }
-        //                            break;
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-        //}
+                PromptDialog.Confirm(
+               context: context,
+               resume: AnythingElseHandler,
+               prompt: "Is there anything else that I could help?",
+               retry: "Sorry, I don't understand that.");
+            }
+            else if (selection == "Last 5 Transactions")
+            {
+                await context.PostAsync($@" {Environment.NewLine}Last 5 transactions:
+                                     {Environment.NewLine}Card Number:2568-2321-628-2212
+                                    {Environment.NewLine}Carrefour : 1500,
+                                    {Environment.NewLine}Max fashion: 2500
+                                    {Environment.NewLine}Geant: 3500");
+
+                PromptDialog.Confirm(
+            context: context,
+            resume: AnythingElseHandler,
+            prompt: "Is there anything else that I could help?",
+            retry: "Sorry, I don't understand that.");
+            }
+            else if (selection == "Statement & Check book Request")
+            {
+                PromptDialog.Choice(context, ResumeStCheckbookOptionsAsync, new List<string>() { "Statement", "Check book Request" }, "Please select the desired service?");
+            }
+            else if (selection == "Loan Account Information")
+            {
+
+            }
+        }
+        public virtual async Task ResumeStCheckbookOptionsAsync(IDialogContext context, IAwaitable<string> argument)
+        {
+            string selection = await argument;
+            if (selection == "Statement")
+            {
+                string message = "We will send you the bank statement to your registered email id.";
+                await context.PostAsync(message);
+
+                //CRMService.CreateTaskforStatement();
+
+                PromptDialog.Confirm(
+               context: context,
+               resume: AnythingElseHandler,
+               prompt: "Is there anything else that I could help?",
+               retry: "Sorry, I don't understand that.");
+            }
+            else if (selection == "Check book Request")
+            {
+                string message = "We have created a service request for your check book request and will send you the cheque book to your registered address.";
+                await context.PostAsync(message);
+
+                //CRMService.CreateCaseforChequeBook();
+
+                PromptDialog.Confirm(
+               context: context,
+               resume: AnythingElseHandler,
+               prompt: "Is there anything else that I could help?",
+               retry: "Sorry, I don't understand that.");
+            }
+        }
+
+
+        public async Task CustomerNameFromGreeting(IDialogContext context, IAwaitable<string> result)
+        {
+            string response = await result;
+            accountNumber = response;
+
+            string message = "Thanks Sekhar for validating your account number.Tell me. How can i assist you?";
+            await context.PostAsync(message);
+        }
+        public virtual async Task CustomerName(IDialogContext context, IAwaitable<string> result)
+        {
+            string response = await result;
+            complaint = response;
+
+            PromptDialog.Text(
+            context: context,
+            resume: CustomerEmailHandler,
+            prompt: "May i know your name please?",
+            retry: "Sorry, I don't understand that.");
+        }
+
+        public virtual async Task CustomerNameHandler(IDialogContext context, IAwaitable<string> result)
+        {
+            string response = await result;
+            customerName = response;
+
+            PromptDialog.Text(
+            context: context,
+            resume: CustomerEmailHandler,
+            prompt: "What is the best number to contact you?",
+            retry: "Sorry, I don't understand that.");
+        }
+        public virtual async Task CustomerEmailHandler(IDialogContext context, IAwaitable<string> result)
+        {
+            string response = await result;
+            phone = response;
+
+            PromptDialog.Text(
+            context: context,
+            resume: FinalResultHandler,
+            prompt: "What is your email id?",
+            retry: "Sorry, I don't understand that.");
+        }
+        public virtual async Task FinalResultHandler(IDialogContext context, IAwaitable<string> argument)
+        {
+            string response = await argument;
+            email = response;
+
+
+
+            await context.PostAsync($@"Thank you for your interest, your request has been logged. Our customer service team will get back to you shortly.
+                                    {Environment.NewLine}Your service request  summary:
+                                    {Environment.NewLine}Complaint Title: {complaint},
+                                    {Environment.NewLine}Customer Name: {customerName},
+                                    {Environment.NewLine}Phone Number: {phone},
+                                    {Environment.NewLine}Email: {email}");
+            //string refno = CRMService.CreateCaseRegistration(complaint, customerName, phone, email);
+            PromptDialog.Confirm(
+                context: context,
+                resume: AnythingElseHandler,
+                prompt: "Is there anything else that I could help?",
+                retry: "Sorry, I don't understand that.");
+        }
+        public async Task AnythingElseHandler(IDialogContext context, IAwaitable<bool> argument)
+        {
+            var answer = await argument;
+            if (answer)
+            {
+                await GeneralGreeting(context, null);
+            }
+            else
+            {
+                string message = $"Thanks for using I Bot. Hope you have a great day!";
+                await context.PostAsync(message);
+
+                //var survey = context.MakeMessage();
+
+                //var attachment = GetSurveyCard();
+                //survey.Attachments.Add(attachment);
+
+                //await context.PostAsync(survey);
+
+                context.Done<string>("conversation ended.");
+            }
+        }
+        public virtual async Task GeneralGreeting(IDialogContext context, IAwaitable<string> argument)
+        {
+            string message = $"Great! What else that can I help you?";
+            await context.PostAsync(message);
+            context.Wait(MessageReceivedAsync);
+        }
+        private async Task Escalate(Activity activity)
+        {
+            // This is our reference to the upstream conversation
+            conversationRef = JsonConvert.SerializeObject(activity.ToConversationReference());
+
+            var chatSpec = new ChatSpec()
+            {
+                // Set Agent skill to target
+                Skill = "BotEscalation",
+                VisitorName = activity.From.Name
+            };
+
+            // Start timer to poll for Live Assist chat events
+            if (timer == null)
+            {
+                timer = timer ?? new Timer(5000);
+                // OnTimedEvent is implemented in the next step
+                timer.Elapsed += (sender, e) => OnTimedEvent(sender, e);
+                timer.Start();
+            }
+
+            // Request a chat via the Sdk    
+            chatContext = await sdk.RequestChat(chatSpec);
+        }
+
         //public async Task AfterResetAsync(IDialogContext context, IAwaitable<bool> argument)
         //{
         //    var confirm = await argument;
@@ -177,154 +516,82 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
         //    }
         //    context.Wait(MessageReceivedAsync);
         //}
-        #endregion
 
-        // Live Assist custom channel data.
-        public class LiveAssistChannelData
+        async void OnTimedEvent(Object source, ElapsedEventArgs eea)
         {
-            [JsonProperty("type", NullValueHandling = NullValueHandling.Ignore)]
-            public string Type { get; set; }
-
-            [JsonProperty("skill", NullValueHandling = NullValueHandling.Ignore)]
-            public string Skill { get; set; }
-        }
-
-        public async Task StartAsync(IDialogContext context)
-        {
-            context.Wait(MessageReceivedAsync);
-        }
-
-        public async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
-        {
-            var message = await argument;
-
-            if (message.ChannelId == "directline")
+            if (chatContext != null)
             {
-                var laChannelData = message.GetChannelData<LiveAssistChannelData>();
+                // Create an upstream reply
+                var reply = JsonConvert.DeserializeObject<ConversationReference>(conversationRef)
+                    .GetPostToBotMessage().CreateReply();
 
-                switch (laChannelData.Type)
+                // Create upstream connection on which to send reply 
+                var client = new ConnectorClient(new Uri(reply.ServiceUrl));
+
+                // Poll Live Assist for events
+                var chatInfo = await sdk.Poll(chatContext);
+
+                if (chatInfo != null)
                 {
-                    case "visitorContextData":
-                        //process context data if required. This is the first message received so say hello.
-                        //await context.PostAsync("Hi, I am an echo bot and will repeat everything you said.");
-                        //string Welcomemessage = "Glad to talk to you. Welcome to iBot - your Virtual iBot.";
-                        //await context.PostAsync(Welcomemessage);
-
-                        //PromptDialog.Text(
-                        //context: context,
-                        //resume: ResumeLanguageOptions,
-                        //prompt: $@"Which language you want to prefer?{Environment.NewLine} 1. English {Environment.NewLine} 2. Arabic",
-                        //retry: "Sorry, I don't understand that.");
-
-                        var reply2 = context.MakeMessage();
-                        var transferTo2 = message.Text.Substring(TRANSFER_MESSAGE.Length);
-
-                        reply2.ChannelData = new LiveAssistChannelData()
+                    // ChatInfo.ChatEvents will contain events since last call to poll.
+                    if (chatInfo.ChatEvents != null && chatInfo.ChatEvents.Count > 0)
+                    {
+                        foreach (ChatEvent e in chatInfo.ChatEvents)
                         {
-                            Type = "transfer",
-                            Skill = "BotEscalation"
-                        };
-
-                        await context.PostAsync(reply2);
-
-                        break;
-
-                    case "systemMessage":
-                        //react to system messages if required
-                        break;
-
-                    case "transferFailed":
-                        //react to transfer failures if required
-                        break;
-
-                    case "otherAgentMessage":
-                        //react to messages from a supervisor if required
-                        break;
-
-                    case "visitorMessage":
-                        // Check for transfer message
-
-                        if (message.Text.StartsWith(TRANSFER_MESSAGE))
-                        {
-                            var reply = context.MakeMessage();
-                            var transferTo = message.Text.Substring(TRANSFER_MESSAGE.Length);
-
-                            reply.ChannelData = new LiveAssistChannelData()
+                            switch (e.Type)
                             {
-                                Type = "transfer",
-                                Skill = "BotEscalation"
-                            };
+                                // type is either "state" or "line".
+                                case "line":
+                                    // Source is either: "system", "agent" or "visitor"
+                                    if (e.Source.Equals("system"))
+                                    {
+                                        reply.From.Name = "system";
+                                    }
+                                    else if (e.Source.Equals("agent"))
+                                    {
+                                        reply.From.Name = chatInfo.AgentName;
 
-                            await context.PostAsync(reply);
-                        }
-                        else if (message.Text.StartsWith("hi") || message.Text.StartsWith("hello") || message.Text.StartsWith("Hi"))
-                        {
-                            if (customerName == null)
-                            {
-                                string Welcomemessage2 = "Glad to talk to you. Welcome to iBot - your Virtual Wasl Property Consultant.";
-                                await context.PostAsync(Welcomemessage2);
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
 
-                                PromptDialog.Text(
-                                context: context,
-                                resume: ResumeLanguageOptions,
-                                prompt: $@"Which language you want to prefer?{Environment.NewLine} 1. English {Environment.NewLine} 2. Arabic",
-                                retry: "Sorry, I don't understand that.");
-                            }
-                            else
-                            {
-                                string message23 = "Tell me " + customerName + ". How i can help you?";
-                                await context.PostAsync(message23);
-                                context.Wait(MessageReceivedAsync);
+                                    reply.Type = "message";
+                                    reply.Text = e.Text;
+                                    client.Conversations.ReplyToActivity(reply);
+                                    break;
+
+                                case "state":
+                                    // State changes
+                                    // Valid values: "waiting", "chatting", "ended"
+                                    if (chatInfo.State.Equals("ended"))
+                                    {
+                                        chatContext = null;
+                                    }
+                                    break;
                             }
                         }
-                        else if (message.Text.Contains("issue") || message.Text.Contains("problem"))
-                        {
-                            //PromptDialog.Text(
-                            //   context: context,
-                            //   resume: CustomerRepeatChecking,
-                            //   prompt: "May i know your mobile number for verification purpose?",
-                            //   retry: "Sorry, I don't understand that.");
-                        }
-                        else if (message.Text.Contains("sell") || message.Text.Contains("buy") || message.Text.Contains("property"))
-                        {
-                            PromptDialog.Text(
-                               context: context,
-                               resume: ResumeLanguageOptions,
-                               prompt: $@"Which language you want to prefer?{Environment.NewLine} 1. English {Environment.NewLine} 2. Arabic",
-                               retry: "Sorry, I don't understand that.");
-                        }
-                        else
-                        {
-                            await context.PostAsync("You said: " + message.Text);
-                           
-                        }
-                        break;
-
-                    default:
-                        await context.PostAsync("This is not a Live Assist message " + laChannelData.Type);
-                        break;
+                    }
                 }
             }
-
-            else if (message.Text == "reset")
+        }
+        public async Task AfterResetAsync(IDialogContext context, IAwaitable<bool> argument)
+        {
+            var confirm = await argument;
+            if (confirm)
             {
-                //PromptDialog.Confirm(
-                //    context,
-                //    AfterResetAsync,
-                //    "Are you sure you want to reset the count?",
-                //    "Didn't get that!",
-                //    promptStyle: PromptStyle.Auto);
+                this.count = 1;
+                await context.PostAsync("Reset count.");
             }
             else
             {
-                await context.PostAsync($"{this.count++}: You said {message.Text}");
-                context.Wait(MessageReceivedAsync);
+                await context.PostAsync("Did not reset count.");
             }
+            context.Wait(MessageReceivedAsync);
         }
-        public async Task ResumeLanguageOptions(IDialogContext context, IAwaitable<string> argument)
-        {
-            
-        }
+        #endregion
+
 
     }
 }
