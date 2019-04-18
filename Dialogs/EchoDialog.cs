@@ -25,7 +25,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
         {
             sdk = sdk ?? new Sdk(new SdkConfiguration()
             {
-                AccountNumber = "80302794"
+                AccountNumber = "25485974"
             });
             context.Wait(MessageReceivedAsync);
         }
