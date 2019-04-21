@@ -319,19 +319,39 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
             resume: ResumeBankOptionsAsync,
             prompt: "Please enter your 4 digit phone banking number or account number?",
             retry: "Sorry, I don't understand that.");
+
+
         }
         public virtual async Task ResumeBankOptionsAsync(IDialogContext context, IAwaitable<string> argument)
         {
-            PromptDialog.Confirm(
-            context: context,
-            resume: LostorBlockExecution,
-            prompt: "Would you like me to suspend your card and issue new card?",
-            retry: "Sorry, I don't understand that.");
+            //PromptDialog.Confirm(
+            //context: context,
+            //resume: LostorBlockExecution,
+            //prompt: "Would you like me to suspend your card and issue new card?",
+            //retry: "Sorry, I don't understand that.");
+
+            var feedback = ((Activity)context.Activity).CreateReply("Would you like me to suspend your card and issue new card?");
+
+            feedback.SuggestedActions = new SuggestedActions()
+            {
+                Actions = new List<CardAction>()
+                {
+                    //new CardAction(){ Title = "👍", Type=ActionTypes.PostBack, Value=$"yes-positive-feedback" },
+                    //new CardAction(){ Title = "👎", Type=ActionTypes.PostBack, Value=$"no-negative-feedback" }
+
+                     new CardAction(){ Title = "Yes", Type=ActionTypes.PostBack, Value=$"Yes" },
+                    new CardAction(){ Title = "No", Type=ActionTypes.PostBack, Value=$"No" }
+                }
+            };
+
+            await context.PostAsync(feedback);
+
+            context.Wait(LostorBlockExecution);
         }
-        public async Task LostorBlockExecution(IDialogContext context, IAwaitable<bool> argument)
+        public async Task LostorBlockExecution(IDialogContext context, IAwaitable<IMessageActivity> argument)
         {
             var answer = await argument;
-            if (answer)
+            if (answer.Text.Contains("Yes"))
             {
                 string message = $"OK. I will need some information to process your request.";
                 await context.PostAsync(message);
@@ -372,16 +392,34 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
                                     {Environment.NewLine}Lost City: {lostCity}");
            // string refno = CRMService.CreateCaseRegistrationForCard(lostDate, lostCity);
 
-            PromptDialog.Confirm(
-               context: context,
-               resume: CardInformation,
-               prompt: "Please confirm your request for suspending the lost card?",
-               retry: "Sorry, I don't understand that.");
+            //PromptDialog.Confirm(
+            //   context: context,
+            //   resume: CardInformation,
+            //   prompt: "Please confirm your request for suspending the lost card?",
+            //   retry: "Sorry, I don't understand that.");
+
+            var feedback = ((Activity)context.Activity).CreateReply("Please confirm your request for suspending the lost card?");
+
+            feedback.SuggestedActions = new SuggestedActions()
+            {
+                Actions = new List<CardAction>()
+                {
+                    //new CardAction(){ Title = "👍", Type=ActionTypes.PostBack, Value=$"yes-positive-feedback" },
+                    //new CardAction(){ Title = "👎", Type=ActionTypes.PostBack, Value=$"no-negative-feedback" }
+
+                     new CardAction(){ Title = "Yes", Type=ActionTypes.PostBack, Value=$"Yes" },
+                    new CardAction(){ Title = "No", Type=ActionTypes.PostBack, Value=$"No" }
+                }
+            };
+
+            await context.PostAsync(feedback);
+
+            context.Wait(CardInformation);
         }
-        public async Task CardInformation(IDialogContext context, IAwaitable<bool> argument)
+        public async Task CardInformation(IDialogContext context, IAwaitable<IMessageActivity> argument)
         {
             var answer = await argument;
-            if (answer)
+            if (answer.Text.Contains("Yes"))
             {
                 string message = $"Thanks. Your card is now suspended and the new card will be delivered to your registered address.";
                 await context.PostAsync(message);
@@ -417,12 +455,40 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
             string message = "Thanks Sekhar for validating your account number.";
             await context.PostAsync(message);
 
-            PromptDialog.Choice(context, ResumePhoneOptionsAsync, new List<string>() { "Balance Enquiry", "Last 5 Transactions", "Statement & Check book Request", "Loan Account Information" }, "Please select the desired service?");
+            //PromptDialog.Choice(context, ResumePhoneOptionsAsync, 
+            //    new List<string>()
+            //    {
+            //        "Balance Enquiry",
+            //        "Last 5 Transactions",
+            //        "Statement & Check book Request",
+            //        "Loan Account Information"
+            //    }, 
+            //    "Please select the desired service?");
+
+            var feedback = ((Activity)context.Activity).CreateReply("Please select the desired service?");
+
+            feedback.SuggestedActions = new SuggestedActions()
+            {
+                Actions = new List<CardAction>()
+                {
+                    //new CardAction(){ Title = "👍", Type=ActionTypes.PostBack, Value=$"yes-positive-feedback" },
+                    //new CardAction(){ Title = "👎", Type=ActionTypes.PostBack, Value=$"no-negative-feedback" }
+
+                     new CardAction(){ Title = "Balance Enquiry", Type=ActionTypes.PostBack, Value=$"BalanceEnquiry" },
+                    new CardAction(){ Title = "Last 5 Transactions", Type=ActionTypes.PostBack, Value=$"Last5Transactions" },
+                     new CardAction(){ Title = "Statement & Check book Request", Type=ActionTypes.PostBack, Value=$"StatementCheckbookRequest" },
+                      new CardAction(){ Title = "Loan Account Information", Type=ActionTypes.PostBack, Value=$"LoanAccountInformation" }
+                }
+            };
+
+            await context.PostAsync(feedback);
+
+            context.Wait(ResumePhoneOptionsAsync);
         }
-        public virtual async Task ResumePhoneOptionsAsync(IDialogContext context, IAwaitable<string> argument)
+        public virtual async Task ResumePhoneOptionsAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
         {
-            string selection = await argument;
-            if (selection == "Balance Enquiry")
+            var selection = await argument;
+            if (selection.Text.Contains("BalanceEnquiry"))
             {
                 string message = "Your account balance in your savings bank is AED: 25500";
                 await context.PostAsync(message);
@@ -445,7 +511,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 
                 context.Wait(AnythingElseHandler);
             }
-            else if (selection == "Last 5 Transactions")
+            else if (selection.Text.Contains("Last5Transactions"))
             {
                 await context.PostAsync($@" {Environment.NewLine}Last 5 transactions:
                                      {Environment.NewLine}Card Number:2568-2321-628-2212
@@ -471,19 +537,43 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 
                 context.Wait(AnythingElseHandler);
             }
-            else if (selection == "Statement & Check book Request")
+            else if (selection.Text.Contains("StatementCheckbookRequest"))
             {
-                PromptDialog.Choice(context, ResumeStCheckbookOptionsAsync, new List<string>() { "Statement", "Check book Request" }, "Please select the desired service?");
+                //PromptDialog.Choice(context, ResumeStCheckbookOptionsAsync, 
+                //    new List<string>()
+                //    {
+                //        "Statement",
+                //        "Check book Request" }, 
+                //    "Please select the desired service?");
+
+                var feedback = ((Activity)context.Activity).CreateReply("Please select the desired service?");
+
+                feedback.SuggestedActions = new SuggestedActions()
+                {
+                    Actions = new List<CardAction>()
+                {
+                    //new CardAction(){ Title = "👍", Type=ActionTypes.PostBack, Value=$"yes-positive-feedback" },
+                    //new CardAction(){ Title = "👎", Type=ActionTypes.PostBack, Value=$"no-negative-feedback" }
+
+                     new CardAction(){ Title = "Statement", Type=ActionTypes.PostBack, Value=$"Statement" },
+                    new CardAction(){ Title = "Check book Request", Type=ActionTypes.PostBack, Value=$"CheckbookRequest" }
+                }
+                };
+
+                await context.PostAsync(feedback);
+
+                context.Wait(ResumeStCheckbookOptionsAsync);
+
             }
-            else if (selection == "Loan Account Information")
+            else if (selection.Text.Contains("LoanAccountInformation"))
             {
 
             }
         }
-        public virtual async Task ResumeStCheckbookOptionsAsync(IDialogContext context, IAwaitable<string> argument)
+        public virtual async Task ResumeStCheckbookOptionsAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
         {
-            string selection = await argument;
-            if (selection == "Statement")
+            var selection = await argument;
+            if (selection.Text.Contains("Statement"))
             {
                 string message = "We will send you the bank statement to your registered email id.";
                 await context.PostAsync(message);
@@ -508,7 +598,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 
                 context.Wait(AnythingElseHandler);
             }
-            else if (selection == "Check book Request")
+            else if (selection.Text.Contains("CheckbookRequest"))
             {
                 string message = "We have created a service request for your check book request and will send you the cheque book to your registered address.";
                 await context.PostAsync(message);
