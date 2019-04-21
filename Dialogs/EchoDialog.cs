@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 
 using Microsoft.Bot.Connector;
@@ -73,31 +73,71 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
                 string message = "Welcome to iBank.";
                 await context.PostAsync(message);
 
-                PromptDialog.Choice(context, ResumeBankServicesOptionsAsync,
-                    new List<string>()
-                    { "English",
-                  "Arabic"
-                    }, "Please select your langauge");
+                //PromptDialog.Choice(context, ResumeBankServicesOptionsAsync,
+                //    new List<string>()
+                //    { "English",
+                //  "Arabic"
+                //    }, "Please select your langauge");
+
+                var feedback = ((Activity)context.Activity).CreateReply("Please select your langauge?");
+
+                feedback.SuggestedActions = new SuggestedActions()
+                {
+                    Actions = new List<CardAction>()
+                {
+                    //new CardAction(){ Title = "👍", Type=ActionTypes.PostBack, Value=$"yes-positive-feedback" },
+                    //new CardAction(){ Title = "👎", Type=ActionTypes.PostBack, Value=$"no-negative-feedback" }
+
+                     new CardAction(){ Title = "English", Type=ActionTypes.PostBack, Value=$"English" },
+                    new CardAction(){ Title = "Arabic", Type=ActionTypes.PostBack, Value=$"Arabic" }
+                }
+                };
+
+                await context.PostAsync(feedback);
+
+                context.Wait(ResumeBankServicesOptionsAsync);
+
             }
         }
-        public virtual async Task ResumeBankServicesOptionsAsync(IDialogContext context, IAwaitable<string> argument)
+        public virtual async Task ResumeBankServicesOptionsAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
         {
-            PromptDialog.Choice(context, ResumeBankServicesAsync,
-                new List<string>()
+            //PromptDialog.Choice(context, ResumeBankServicesAsync,
+            //    new List<string>()
+            //    {
+            //        "Phone Banking",
+            //        "Lost Cards",
+            //        "Internet Banking",
+            //        "Products",
+            //        "Suggestions and Complaints"
+            //    },
+            //    "Thank you, please select your desired service.");
+
+            var feedback = ((Activity)context.Activity).CreateReply("Thank you, please select your desired service.");
+
+            feedback.SuggestedActions = new SuggestedActions()
+            {
+                Actions = new List<CardAction>()
                 {
-                    "Phone Banking",
-                    "Lost Cards",
-                    "Internet Banking",
-                    "Products",
-                    "Suggestions and Complaints"
-                },
-                "Thank you, please select your desired service.");
+                    //new CardAction(){ Title = "👍", Type=ActionTypes.PostBack, Value=$"yes-positive-feedback" },
+                    //new CardAction(){ Title = "👎", Type=ActionTypes.PostBack, Value=$"no-negative-feedback" }
+
+                     new CardAction(){ Title = "Phone Banking", Type=ActionTypes.PostBack, Value=$"PhoneBanking" },
+                    new CardAction(){ Title = "Lost Cards", Type=ActionTypes.PostBack, Value=$"LostCards" },
+                     new CardAction(){ Title = "Internet Banking", Type=ActionTypes.PostBack, Value=$"InternetBanking" },
+                      new CardAction(){ Title = "Products", Type=ActionTypes.PostBack, Value=$"Products" },
+                       new CardAction(){ Title = "Suggestions and Complaints", Type=ActionTypes.PostBack, Value=$"SuggestionsandComplaints" }
+                }
+            };
+
+            await context.PostAsync(feedback);
+
+            context.Wait(ResumeBankServicesAsync);
         }
-        public virtual async Task ResumeBankServicesAsync(IDialogContext context, IAwaitable<string> argument)
+        public virtual async Task ResumeBankServicesAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
         {
             var result = await argument;
-            string selection = result;
-            if (selection == "Phone Banking")
+            //string selection = result;
+            if (result.Text.Contains("PhoneBanking"))
             {
 
                 PromptDialog.Text(
@@ -106,17 +146,34 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
                 prompt: "Please enter your 4 digit phone banking number or account number",
                 retry: "Sorry, I don't understand that.");
             }
-            else if (selection == "Lost Cards")
+            else if (result.Text.Contains("LostCards"))
             {
-                PromptDialog.Choice(context, ResumeBankValidationAsync,
-                    new List<string>()
-                    {
-                        "Debit Card",
-                        "Credit Card"
-                    },
-                    "Please select the one you lost?");
+                //PromptDialog.Choice(context, ResumeBankValidationAsync,
+                //    new List<string>()
+                //    {
+                //        "Debit Card",
+                //        "Credit Card"
+                //    },
+                //    "Please select the one you lost?");
+                var feedback = ((Activity)context.Activity).CreateReply("Please select the one you lost?");
+
+                feedback.SuggestedActions = new SuggestedActions()
+                {
+                    Actions = new List<CardAction>()
+                {
+                    //new CardAction(){ Title = "👍", Type=ActionTypes.PostBack, Value=$"yes-positive-feedback" },
+                    //new CardAction(){ Title = "👎", Type=ActionTypes.PostBack, Value=$"no-negative-feedback" }
+
+                     new CardAction(){ Title = "Debit Card", Type=ActionTypes.PostBack, Value=$"DebitCard" },
+                    new CardAction(){ Title = "Credit Card", Type=ActionTypes.PostBack, Value=$"CreditCard" }
+                }
+                };
+
+                await context.PostAsync(feedback);
+
+                context.Wait(ResumeBankValidationAsync);
             }
-            else if (selection == "Internet Banking")
+            else if (result.Text.Contains("Internet Banking"))
             {
                 PromptDialog.Text(
                context: context,
@@ -124,19 +181,39 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
                prompt: "Please enter your 4 digit phone banking number or account number",
                retry: "Sorry, I don't understand that.");
             }
-            else if (selection == "Products")
+            else if (result.Text.Contains("Products"))
             {
-                PromptDialog.Choice(context, ResumeBankProductOptionsAsync,
-                   new List<string>()
-                   {
-                        "Apply for a loan",
-                        "Open an account",
-                        "Know interest rates",
-                        "Forex"
-                   },
-                   "Please select the desired service?");
+                //PromptDialog.Choice(context, ResumeBankProductOptionsAsync,
+                //   new List<string>()
+                //   {
+                //        "Apply for a loan",
+                //        "Open an account",
+                //        "Know interest rates",
+                //        "Forex"
+                //   },
+                //   "Please select the desired service?");
+
+                var feedback = ((Activity)context.Activity).CreateReply("Please select the desired service?");
+
+                feedback.SuggestedActions = new SuggestedActions()
+                {
+                    Actions = new List<CardAction>()
+                {
+                    //new CardAction(){ Title = "👍", Type=ActionTypes.PostBack, Value=$"yes-positive-feedback" },
+                    //new CardAction(){ Title = "👎", Type=ActionTypes.PostBack, Value=$"no-negative-feedback" }
+
+                     new CardAction(){ Title = "Apply for a loan", Type=ActionTypes.PostBack, Value=$"Applyforaloan" },
+                    new CardAction(){ Title = "Open an account", Type=ActionTypes.PostBack, Value=$"Openanaccount" },
+                    new CardAction(){ Title = "Know interest rates", Type=ActionTypes.PostBack, Value=$"Knowinterestrates" },
+                    new CardAction(){ Title = "Forex", Type=ActionTypes.PostBack, Value=$"Forex" }
+                }
+                };
+
+                await context.PostAsync(feedback);
+
+                context.Wait(ResumeBankProductOptionsAsync);
             }
-            else if (selection == "Suggestions and Complaints")
+            else if (result.Text.Contains("SuggestionsandComplaints"))
             {
                 PromptDialog.Text(
             context: context,
@@ -145,10 +222,10 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
             retry: "Sorry, I don't understand that.");
             }
         }
-        public virtual async Task ResumeBankProductOptionsAsync(IDialogContext context, IAwaitable<string> argument)
+        public virtual async Task ResumeBankProductOptionsAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
         {
-            string selection = await argument;
-            if (selection == "Apply for a loan")
+            var selection = await argument;
+            if (selection.Text.Contains("Applyforaloan"))
             {
                 PromptDialog.Text(
             context: context,
@@ -156,15 +233,15 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
             prompt: "Please enter your 4 digit phone banking number or account number?",
             retry: "Sorry, I don't understand that.");
             }
-            else if (selection == "Open an account")
+            else if (selection.Text.Contains("Openanaccount"))
             {
 
             }
-            else if (selection == "Know interest rates")
+            else if (selection.Text.Contains("Knowinterestrates"))
             {
 
             }
-            else if (selection == "Forex")
+            else if (selection.Text.Contains("Forex"))
             {
 
             }
@@ -215,15 +292,27 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
                                     {Environment.NewLine}Number of Months: {loanAmountMonths},
                                     {Environment.NewLine}Phone Number: {phone}");
 
-           // string refno = CRMService.CreateLead(loanAmount, loanAmountMonths, phone);
+            // string refno = CRMService.CreateLead(loanAmount, loanAmountMonths, phone);
 
-            PromptDialog.Confirm(
-         context: context,
-         resume: AnythingElseHandler,
-         prompt: "Is there anything else that I could help?",
-         retry: "Sorry, I don't understand that.");
+            var feedback = ((Activity)context.Activity).CreateReply("Is there anything else that I could help?");
+
+            feedback.SuggestedActions = new SuggestedActions()
+            {
+                Actions = new List<CardAction>()
+                {
+                    //new CardAction(){ Title = "👍", Type=ActionTypes.PostBack, Value=$"yes-positive-feedback" },
+                    //new CardAction(){ Title = "👎", Type=ActionTypes.PostBack, Value=$"no-negative-feedback" }
+
+                     new CardAction(){ Title = "Yes", Type=ActionTypes.PostBack, Value=$"Yes" },
+                    new CardAction(){ Title = "No", Type=ActionTypes.PostBack, Value=$"No" }
+                }
+            };
+
+            await context.PostAsync(feedback);
+
+            context.Wait(AnythingElseHandler);
         }
-        public virtual async Task ResumeBankValidationAsync(IDialogContext context, IAwaitable<string> argument)
+        public virtual async Task ResumeBankValidationAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
         {
             PromptDialog.Text(
             context: context,
@@ -297,11 +386,23 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
                 string message = $"Thanks. Your card is now suspended and the new card will be delivered to your registered address.";
                 await context.PostAsync(message);
 
-                PromptDialog.Confirm(
-       context: context,
-       resume: AnythingElseHandler,
-       prompt: "Is there anything else that I could help?",
-       retry: "Sorry, I don't understand that.");
+                var feedback = ((Activity)context.Activity).CreateReply("Is there anything else that I could help?");
+
+                feedback.SuggestedActions = new SuggestedActions()
+                {
+                    Actions = new List<CardAction>()
+                {
+                    //new CardAction(){ Title = "👍", Type=ActionTypes.PostBack, Value=$"yes-positive-feedback" },
+                    //new CardAction(){ Title = "👎", Type=ActionTypes.PostBack, Value=$"no-negative-feedback" }
+
+                     new CardAction(){ Title = "Yes", Type=ActionTypes.PostBack, Value=$"Yes" },
+                    new CardAction(){ Title = "No", Type=ActionTypes.PostBack, Value=$"No" }
+                }
+                };
+
+                await context.PostAsync(feedback);
+
+                context.Wait(AnythingElseHandler);
             }
             else
             {
@@ -326,11 +427,23 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
                 string message = "Your account balance in your savings bank is AED: 25500";
                 await context.PostAsync(message);
 
-                PromptDialog.Confirm(
-               context: context,
-               resume: AnythingElseHandler,
-               prompt: "Is there anything else that I could help?",
-               retry: "Sorry, I don't understand that.");
+                var feedback = ((Activity)context.Activity).CreateReply("Is there anything else that I could help?");
+
+                feedback.SuggestedActions = new SuggestedActions()
+                {
+                    Actions = new List<CardAction>()
+                {
+                    //new CardAction(){ Title = "👍", Type=ActionTypes.PostBack, Value=$"yes-positive-feedback" },
+                    //new CardAction(){ Title = "👎", Type=ActionTypes.PostBack, Value=$"no-negative-feedback" }
+
+                     new CardAction(){ Title = "Yes", Type=ActionTypes.PostBack, Value=$"Yes" },
+                    new CardAction(){ Title = "No", Type=ActionTypes.PostBack, Value=$"No" }
+                }
+                };
+
+                await context.PostAsync(feedback);
+
+                context.Wait(AnythingElseHandler);
             }
             else if (selection == "Last 5 Transactions")
             {
@@ -340,11 +453,23 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
                                     {Environment.NewLine}Max fashion: 2500
                                     {Environment.NewLine}Geant: 3500");
 
-                PromptDialog.Confirm(
-            context: context,
-            resume: AnythingElseHandler,
-            prompt: "Is there anything else that I could help?",
-            retry: "Sorry, I don't understand that.");
+                var feedback = ((Activity)context.Activity).CreateReply("Is there anything else that I could help?");
+
+                feedback.SuggestedActions = new SuggestedActions()
+                {
+                    Actions = new List<CardAction>()
+                {
+                    //new CardAction(){ Title = "👍", Type=ActionTypes.PostBack, Value=$"yes-positive-feedback" },
+                    //new CardAction(){ Title = "👎", Type=ActionTypes.PostBack, Value=$"no-negative-feedback" }
+
+                     new CardAction(){ Title = "Yes", Type=ActionTypes.PostBack, Value=$"Yes" },
+                    new CardAction(){ Title = "No", Type=ActionTypes.PostBack, Value=$"No" }
+                }
+                };
+
+                await context.PostAsync(feedback);
+
+                context.Wait(AnythingElseHandler);
             }
             else if (selection == "Statement & Check book Request")
             {
@@ -365,11 +490,23 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 
                 //CRMService.CreateTaskforStatement();
 
-                PromptDialog.Confirm(
-               context: context,
-               resume: AnythingElseHandler,
-               prompt: "Is there anything else that I could help?",
-               retry: "Sorry, I don't understand that.");
+                var feedback = ((Activity)context.Activity).CreateReply("Is there anything else that I could help?");
+
+                feedback.SuggestedActions = new SuggestedActions()
+                {
+                    Actions = new List<CardAction>()
+                {
+                    //new CardAction(){ Title = "👍", Type=ActionTypes.PostBack, Value=$"yes-positive-feedback" },
+                    //new CardAction(){ Title = "👎", Type=ActionTypes.PostBack, Value=$"no-negative-feedback" }
+
+                     new CardAction(){ Title = "Yes", Type=ActionTypes.PostBack, Value=$"Yes" },
+                    new CardAction(){ Title = "No", Type=ActionTypes.PostBack, Value=$"No" }
+                }
+                };
+
+                await context.PostAsync(feedback);
+
+                context.Wait(AnythingElseHandler);
             }
             else if (selection == "Check book Request")
             {
@@ -378,11 +515,23 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 
                 //CRMService.CreateCaseforChequeBook();
 
-                PromptDialog.Confirm(
-               context: context,
-               resume: AnythingElseHandler,
-               prompt: "Is there anything else that I could help?",
-               retry: "Sorry, I don't understand that.");
+                var feedback = ((Activity)context.Activity).CreateReply("Is there anything else that I could help?");
+
+                feedback.SuggestedActions = new SuggestedActions()
+                {
+                    Actions = new List<CardAction>()
+                {
+                    //new CardAction(){ Title = "👍", Type=ActionTypes.PostBack, Value=$"yes-positive-feedback" },
+                    //new CardAction(){ Title = "👎", Type=ActionTypes.PostBack, Value=$"no-negative-feedback" }
+
+                     new CardAction(){ Title = "Yes", Type=ActionTypes.PostBack, Value=$"Yes" },
+                    new CardAction(){ Title = "No", Type=ActionTypes.PostBack, Value=$"No" }
+                }
+                };
+
+                await context.PostAsync(feedback);
+
+                context.Wait(AnythingElseHandler);
             }
         }
 
@@ -443,16 +592,28 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
                                     {Environment.NewLine}Phone Number: {phone},
                                     {Environment.NewLine}Email: {email}");
             //string refno = CRMService.CreateCaseRegistration(complaint, customerName, phone, email);
-            PromptDialog.Confirm(
-                context: context,
-                resume: AnythingElseHandler,
-                prompt: "Is there anything else that I could help?",
-                retry: "Sorry, I don't understand that.");
+            var feedback = ((Activity)context.Activity).CreateReply("Is there anything else that I could help?");
+
+            feedback.SuggestedActions = new SuggestedActions()
+            {
+                Actions = new List<CardAction>()
+                {
+                    //new CardAction(){ Title = "👍", Type=ActionTypes.PostBack, Value=$"yes-positive-feedback" },
+                    //new CardAction(){ Title = "👎", Type=ActionTypes.PostBack, Value=$"no-negative-feedback" }
+
+                     new CardAction(){ Title = "Yes", Type=ActionTypes.PostBack, Value=$"Yes" },
+                    new CardAction(){ Title = "No", Type=ActionTypes.PostBack, Value=$"No" }
+                }
+            };
+
+            await context.PostAsync(feedback);
+
+            context.Wait(AnythingElseHandler);
         }
-        public async Task AnythingElseHandler(IDialogContext context, IAwaitable<bool> argument)
+        public async Task AnythingElseHandler(IDialogContext context, IAwaitable<IMessageActivity> argument)
         {
             var answer = await argument;
-            if (answer)
+            if (answer.Text.Contains("Yes"))
             {
                 await GeneralGreeting(context, null);
             }
